@@ -171,6 +171,18 @@ void DownloadWorker::startDownload(WDownloadReplyBase *request) {
 		return;
 	}
 
+#ifdef KHINSIDER_CURL_IMPERSONATE
+	// Presents a browser TLS/HTTP2 fingerprint, which the site's bot protection requires.
+	// Applied first so the options below still take precedence.
+	const CURLcode impersonateResult = curl_easy_impersonate(easyHandle, KHINSIDER_CURL_IMPERSONATE_TARGET, 1);
+	if (impersonateResult != CURLE_OK) {
+		qWarning() << "Worker" << m_id << "- curl_easy_impersonate(" KHINSIDER_CURL_IMPERSONATE_TARGET ") failed:"
+				<< curl_easy_strerror(impersonateResult) << "- request will not look like a browser";
+	}
+	// Browsers always send Accept-Encoding, a request without it stands out. "" means every supported encoding.
+	curl_easy_setopt(easyHandle, CURLOPT_ACCEPT_ENCODING, "");
+#endif
+
 	// Create download data structure
 	request->setLastBytesRecieved(0);
 	request->setLastSpeedUpdate(QDateTime::currentMSecsSinceEpoch());
